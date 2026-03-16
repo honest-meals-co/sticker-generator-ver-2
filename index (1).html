@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Honest Meals Co. – Sticker Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a; --surface: #141414; --surface2: #1e1e1e;
+    --border: #2a2a2a; --border-hi: #3a3a3a;
+    --text: #f0f0f0; --text-dim: #777;
+    --lime: #8BFF00; --lime-dim: #6bcc00;
+    --lime-bg: rgba(139,255,0,0.06); --lime-bg2: rgba(139,255,0,0.12);
+    --red: #ff4444; --radius: 10px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+  .header{padding:14px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;background:var(--bg)}
+  .brand{display:flex;align-items:center;gap:14px}
+  .brand-text h1{font-size:17px;font-weight:800;letter-spacing:-0.3px;line-height:1.2;color:var(--lime)}
+  .brand-text .sub{font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px}
+  .header-actions{display:flex;gap:10px;align-items:center}
+  .btn{font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;padding:9px 18px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{background:var(--surface2);border-color:var(--border-hi)}
+  .btn-primary{background:var(--lime);color:#000;border-color:var(--lime);font-weight:800}
+  .btn-primary:hover{background:var(--lime-dim);border-color:var(--lime-dim)}
+  .btn-danger{color:var(--red);border-color:transparent;background:none;padding:4px 8px;font-size:11px}
+  .btn-danger:hover{background:rgba(255,68,68,0.1)}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+  .app{display:flex;height:calc(100vh - 77px);overflow:hidden}
+  .sidebar{width:340px;min-width:340px;border-right:1px solid var(--border);overflow-y:scroll;padding:20px;display:flex;flex-direction:column;gap:16px;min-height:0;flex-shrink:0}
+  .sidebar::-webkit-scrollbar{width:8px}
+  .sidebar::-webkit-scrollbar-track{background:var(--bg);border-radius:4px}
+  .sidebar::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:4px;border:2px solid var(--bg)}
+  .sidebar::-webkit-scrollbar-thumb:hover{background:var(--lime)}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;flex-shrink:0}
+  .panel-header{padding:11px 16px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--lime);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .panel-body{padding:14px 16px}
+  .upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface);position:relative;overflow:hidden;flex-shrink:0}
+  .upload-zone::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(139,255,0,0.03) 0%,transparent 70%);pointer-events:none}
+  .upload-zone:hover,.upload-zone.dragover{border-color:var(--lime);background:var(--lime-bg)}
+  .upload-zone svg{margin-bottom:10px;opacity:.4;color:var(--lime)}
+  .upload-zone p{font-size:13px;color:var(--text-dim);position:relative}
+  .upload-zone .big{font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px}
+  #fileInput{display:none}
+  .file-list{display:flex;flex-direction:column;gap:8px;flex-shrink:0}
+  .file-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px;transition:border-color .15s}
+  .file-card:hover{border-color:var(--border-hi)}
+  .file-icon{width:34px;height:34px;background:var(--lime-bg2);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--lime);font-weight:800;font-size:10px;font-family:'JetBrains Mono',monospace;flex-shrink:0}
+  .file-card-meta{flex:1;min-width:0}
+  .file-card-meta .name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .file-card-meta .details{font-size:10px;color:var(--text-dim);margin-top:1px}
+  .file-card-order{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);background:var(--bg);border-radius:4px;padding:2px 6px;flex-shrink:0}
+  .grid-inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace}
+  .field input{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;width:100%;transition:border-color .15s}
+  .field input:focus{outline:none;border-color:var(--lime)}
+  .section-label{font-size:10px;font-weight:800;color:var(--lime);text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px;display:flex;align-items:center;gap:8px}
+  .section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+  .gap-grid-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .gap-grid-rows{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .computed-info{font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;padding:10px 0 0;border-top:1px solid var(--border);margin-top:10px;line-height:1.7}
+  .computed-info strong{color:var(--lime)}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
+  .toggle-row span{font-size:12px;color:var(--text-dim)}
+  .toggle{width:36px;height:20px;background:var(--border);border-radius:10px;position:relative;cursor:pointer;transition:background .2s}
+  .toggle.on{background:var(--lime)}
+  .toggle::after{content:'';position:absolute;width:16px;height:16px;background:#000;border-radius:50%;top:2px;left:2px;transition:transform .2s}
+  .toggle.on::after{transform:translateX(16px)}
+  .align-grid{display:flex;flex-direction:column;gap:8px}
+  .align-row{display:flex;align-items:center;gap:8px;font-size:12px}
+  .align-row label{width:50px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);flex-shrink:0}
+  .align-row input[type="range"]{flex:1;accent-color:var(--lime);height:4px}
+  .align-row .val{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--lime);width:48px;text-align:right;flex-shrink:0}
+  .tab-row{display:flex;border-bottom:1px solid var(--border)}
+  .tab-btn{flex:1;padding:10px;font-size:12px;font-weight:700;font-family:'Nunito',sans-serif;background:none;border:none;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+  .tab-btn.active{color:var(--lime);border-bottom-color:var(--lime)}
+  .tab-content{display:none}
+  .tab-content.active{display:block}
+  .hint{font-size:11px;color:var(--text-dim);margin-bottom:8px;line-height:1.5}
+  .preview-area{flex:1;overflow:auto;padding:24px;display:flex;flex-direction:column;align-items:center;gap:24px;background:#050505;background-image:radial-gradient(circle at 20% 30%,rgba(139,255,0,0.015) 0%,transparent 50%),radial-gradient(circle at 80% 70%,rgba(139,255,0,0.01) 0%,transparent 50%)}
+  .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-dim);gap:14px}
+  .empty-state p{font-size:14px;font-weight:700}
+  .a4-page-wrapper{position:relative}
+  .page-label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:8px}
+  .a4-page{width:210mm;height:297mm;background:#fff;box-shadow:0 4px 50px rgba(139,255,0,0.06),0 2px 20px rgba(0,0,0,0.6);border-radius:4px;position:relative;overflow:hidden}
+  .sticker-cell{position:absolute;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .sticker-cell img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+  .sticker-cell.show-guides{outline:1px dashed rgba(139,255,0,0.4)}
+  .stats{display:flex;gap:16px;font-size:12px;color:var(--text-dim);padding:8px 0}
+  .stats span{font-family:'JetBrains Mono',monospace}
+  .stats strong{color:var(--text)}
+  .loading-overlay{position:fixed;inset:0;background:rgba(10,10,10,0.9);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:16px}
+  .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--lime);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-text{font-size:13px;color:var(--text-dim);font-weight:700}
+  .loading-progress{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--lime)}
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--border-hi)}
+  @media print{body{background:#fff!important}.header,.sidebar{display:none!important}.preview-area{padding:0!important;background:#fff!important;overflow:visible!important}.a4-page-wrapper{break-after:page;margin:0!important}.a4-page{box-shadow:none!important;border-radius:0!important;width:210mm!important;height:297mm!important;margin:0!important}.sticker-cell.show-guides{outline:none!important}.page-label{display:none!important}.empty-state{display:none!important}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="brand">
+    <div class="brand-text">
+      <h1>Honest Meals Co.</h1>
+      <div class="sub">Sticker Generator</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <div class="stats" id="stats"></div>
+    <button class="btn" id="resetAllBtn" disabled onclick="resetAll()">↺ Reset All</button>
+    <button class="btn btn-primary" id="downloadBtn" disabled onclick="downloadPDF()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download PDF
+    </button>
+  </div>
+</div>
+<div class="app">
+  <div class="sidebar">
+    <div id="uploadSection">
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p class="big" id="uploadTitle">Drop your PDFs here</p>
+        <p id="uploadSub">or click to browse · up to 5 files · each page = one sticker</p>
+      </div>
+      <input type="file" id="fileInput" accept="application/pdf" multiple>
+    </div>
+    <div class="file-list" id="fileList" style="display:none"></div>
+    <div class="panel">
+      <div class="panel-header">Presets</div>
+      <div class="panel-body" style="padding:10px 16px">
+        <div class="toggle-row" style="padding:4px 0">
+          <span style="font-size:13px;font-weight:700;color:var(--text)">Mobile Printing</span>
+          <div class="toggle on" id="presetMobileToggle" onclick="toggleMobilePreset()"></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">Sheet Layout<span style="font-size:10px;text-transform:none;letter-spacing:0;color:var(--text-dim)">mm</span></div>
+      <div class="panel-body">
+        <div class="grid-inputs">
+          <div class="field"><label>Left Margin</label><input type="number" id="marginLeft" value="5" step="0.5" min="0" max="30"></div>
+          <div class="field"><label>Right Margin</label><input type="number" id="marginRight" value="5" step="0.5" min="0" max="30"></div>
+          <div class="field"><label>Top Margin</label><input type="number" id="marginTop" value="8" step="0.5" min="0" max="30"></div>
+          <div class="field"><label>Bottom Margin</label><input type="number" id="marginBottom" value="8" step="0.5" min="0" max="30"></div>
+        </div>
+        <div class="section-label">Column Buffers (2)</div>
+        <div class="gap-grid-cols">
+          <div class="field"><label>Col 1 ↔ 2</label><input type="number" class="gap-input" id="cg0" value="0" step="0.25" min="0" max="20"></div>
+          <div class="field"><label>Col 2 ↔ 3</label><input type="number" class="gap-input" id="cg1" value="0" step="0.25" min="0" max="20"></div>
+        </div>
+        <div class="section-label">Row Buffers (7)</div>
+        <div class="gap-grid-rows">
+          <div class="field"><label>R1 ↔ R2</label><input type="number" class="gap-input" id="rg0" value="0" step="0.25" min="0" max="20"></div>
+          <div class="field"><label>R2 ↔ R3</label><input type="number" class="gap-input" id="rg1" value="0" step="0.25" min="0" max="20"></div>
+          <div class="field"><label>R3 ↔ R4</label><input type="number" class="gap-input" id="rg2" value="0" step="0.25" min="0" max="20"></div>
+          <div class="field"><label>R4 ↔ R5</label><input type="number" class="gap-input" id="rg3" value="0" step="0.25" min="0" max="20"></div>
+          <div class="field"><label>R5 ↔ R6</label><input type="number" class="gap-input" id="rg4" value="0" step="0.25" min="0" max="20"></div>
+          <div class="field"><label>R6 ↔ R7</label><input type="number" class="gap-input" id="rg5" value="0" step="0.25" min="0" max="20"></div>
+          <div class="field"><label>R7 ↔ R8</label><input type="number" class="gap-input" id="rg6" value="0" step="0.25" min="0" max="20"></div>
+        </div>
+        <div class="toggle-row" style="margin-top:8px"><span>Show cell guides</span><div class="toggle on" id="guidesToggle" onclick="toggleGuides()"></div></div>
+        <div class="computed-info" id="computedInfo">Sticker: <strong>~66.7mm</strong> × <strong>~35.1mm</strong></div>
+      </div>
+    </div>
+    <div class="panel" id="alignPanel">
+      <div class="panel-header">Fine Tune Nudge</div>
+      <div class="tab-row">
+        <button class="tab-btn active" onclick="switchTab('columns',this)">Columns</button>
+        <button class="tab-btn" onclick="switchTab('rows',this)">Rows</button>
+      </div>
+      <div class="panel-body">
+        <div class="tab-content active" id="tab-columns"></div>
+        <div class="tab-content" id="tab-rows"></div>
+      </div>
+    </div>
+  </div>
+  <div class="preview-area" id="previewArea">
+    <div class="empty-state" id="emptyState">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="opacity:0.2;color:var(--lime)"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <p>Upload PDFs to get started</p>
+      <p style="font-size:12px;color:var(--text-dim);font-weight:600">Up to 5 PDF files · each page becomes a sticker · 24 per A4 sheet</p>
+    </div>
+  </div>
+</div>
+<div class="loading-overlay" id="loading" style="display:none">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">Processing PDF…</div>
+  <div class="loading-progress" id="loadingProgress"></div>
+</div>
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const COLS=3,ROWS=8,PER_PAGE=COLS*ROWS,MAX_FILES=5;
+let uploadedFiles=[];
+let stickerImages=[];
+let stickerCanvases=[];
+let showGuides=true;
+let colOffsets=new Array(COLS).fill(0);
+let rowOffsets=new Array(ROWS).fill(0);
+
+const PRESET_MOBILE_PRINTING={
+  marginLeft:5,marginRight:5,marginTop:8,marginBottom:8,
+  colGaps:[0,0],
+  rowGaps:[0,0,0,0,0.5,0.75,0.75],
+  colOffsets:[0,0,0],
+  rowOffsets:[-1.5,0,0,0,0,0.8,1.0,1.0]
+};
+let presetActive=true;
+let savedSettings=null;
+
+function captureSettings(){
+  return{
+    marginLeft:gv('marginLeft'),marginRight:gv('marginRight'),
+    marginTop:gv('marginTop'),marginBottom:gv('marginBottom'),
+    colGaps:[gv('cg0'),gv('cg1')],
+    rowGaps:[gv('rg0'),gv('rg1'),gv('rg2'),gv('rg3'),gv('rg4'),gv('rg5'),gv('rg6')],
+    colOffsets:[...colOffsets],rowOffsets:[...rowOffsets]
+  };
+}
+
+function applySettings(s){
+  document.getElementById('marginLeft').value=s.marginLeft;
+  document.getElementById('marginRight').value=s.marginRight;
+  document.getElementById('marginTop').value=s.marginTop;
+  document.getElementById('marginBottom').value=s.marginBottom;
+  s.colGaps.forEach((v,i)=>document.getElementById('cg'+i).value=v);
+  s.rowGaps.forEach((v,i)=>document.getElementById('rg'+i).value=v);
+  colOffsets=[...s.colOffsets];rowOffsets=[...s.rowOffsets];
+  const{cellW,cellH}=getLayout();
+  if(computedInfo)computedInfo.innerHTML='Sticker: <strong>'+cellW.toFixed(1)+'mm</strong> × <strong>'+cellH.toFixed(1)+'mm</strong>';
+  buildNudgeControls();
+  rebuildPages();
+}
+
+function toggleMobilePreset(){
+  const toggle=document.getElementById('presetMobileToggle');
+  if(!presetActive){
+    savedSettings=captureSettings();
+    applySettings(PRESET_MOBILE_PRINTING);
+    presetActive=true;toggle.classList.add('on');
+  }else{
+    if(savedSettings)applySettings(savedSettings);
+    presetActive=false;toggle.classList.remove('on');
+  }
+}
+
+const previewArea=document.getElementById('previewArea');
+const emptyState=document.getElementById('emptyState');
+const loading=document.getElementById('loading');
+const loadingText=document.getElementById('loadingText');
+const loadingProgress=document.getElementById('loadingProgress');
+const statsEl=document.getElementById('stats');
+const downloadBtn=document.getElementById('downloadBtn');
+const resetAllBtn=document.getElementById('resetAllBtn');
+const alignPanel=document.getElementById('alignPanel');
+const computedInfo=document.getElementById('computedInfo');
+const uploadZone=document.getElementById('uploadZone');
+const uploadSection=document.getElementById('uploadSection');
+const fileInput=document.getElementById('fileInput');
+const fileListEl=document.getElementById('fileList');
+
+document.querySelectorAll('#marginLeft,#marginRight,#marginTop,#marginBottom,.gap-input').forEach(el=>{el.addEventListener('input',rebuildPages)});
+
+uploadZone.addEventListener('dragover',e=>{e.preventDefault();uploadZone.classList.add('dragover')});
+uploadZone.addEventListener('dragleave',()=>uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop',e=>{
+  e.preventDefault();uploadZone.classList.remove('dragover');
+  const files=[...e.dataTransfer.files].filter(f=>f.type==='application/pdf');
+  if(files.length)handleFiles(files);
+});
+fileInput.addEventListener('change',e=>{
+  const files=[...e.target.files];
+  if(files.length)handleFiles(files);
+  fileInput.value='';
+});
+
+function gv(id){return parseFloat(document.getElementById(id).value)||0}
+function getColGaps(){return[gv('cg0'),gv('cg1')]}
+function getRowGaps(){return[gv('rg0'),gv('rg1'),gv('rg2'),gv('rg3'),gv('rg4'),gv('rg5'),gv('rg6')]}
+
+function getLayout(){
+  const mL=gv('marginLeft'),mR=gv('marginRight'),mT=gv('marginTop'),mB=gv('marginBottom');
+  const cGaps=getColGaps(),rGaps=getRowGaps();
+  const totalCG=cGaps.reduce((a,b)=>a+b,0);
+  const totalRG=rGaps.reduce((a,b)=>a+b,0);
+  const cellW=(210-mL-mR-totalCG)/COLS;
+  const cellH=(297-mT-mB-totalRG)/ROWS;
+  return{mL,mR,mT,mB,cGaps,rGaps,cellW,cellH};
+}
+
+function toggleGuides(){
+  showGuides=!showGuides;
+  document.getElementById('guidesToggle').classList.toggle('on',showGuides);
+  document.querySelectorAll('.sticker-cell').forEach(c=>c.classList.toggle('show-guides',showGuides));
+}
+
+async function handleFiles(files){
+  const remaining=MAX_FILES-uploadedFiles.length;
+  if(remaining<=0)return alert('Maximum 5 PDF files allowed.');
+  const toProcess=files.slice(0,remaining);
+  loading.style.display='flex';
+  for(const file of toProcess){
+    if(uploadedFiles.some(f=>f.name===file.name)){continue}
+    loadingText.textContent='Loading '+file.name+'…';
+    loadingProgress.textContent='';
+    try{
+      const buf=await file.arrayBuffer();
+      const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+      const total=pdf.numPages;
+      const canvases=[],images=[];
+      for(let i=1;i<=total;i++){
+        loadingText.textContent=file.name;
+        loadingProgress.textContent='Page '+i+' / '+total;
+        const page=await pdf.getPage(i);
+        const vp=page.getViewport({scale:2});
+        const canvas=document.createElement('canvas');
+        canvas.width=vp.width;canvas.height=vp.height;
+        await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+        canvases.push(canvas);
+        images.push(canvas.toDataURL('image/jpeg',0.85));
+      }
+      uploadedFiles.push({name:file.name,pageCount:total,canvases,images});
+    }catch(err){alert('Error processing '+file.name+': '+err.message)}
+  }
+  loading.style.display='none';
+  flattenStickers();
+  renderFileList();
+  rebuildPages();
+  updateStats();
+  if(uploadedFiles.length>0){
+    downloadBtn.disabled=false;resetAllBtn.disabled=false;
+  }
+}
+
+function flattenStickers(){
+  stickerCanvases=[];stickerImages=[];
+  for(const f of uploadedFiles){stickerCanvases.push(...f.canvases);stickerImages.push(...f.images)}
+}
+
+function renderFileList(){
+  if(uploadedFiles.length===0){
+    fileListEl.style.display='none';uploadSection.style.display='block';
+    document.getElementById('uploadTitle').textContent='Drop your PDFs here';
+    document.getElementById('uploadSub').textContent='or click to browse · up to 5 files · each page = one sticker';
+    uploadZone.style.padding='28px 20px';
+    return;
+  }
+  fileListEl.style.display='flex';
+  if(uploadedFiles.length>=MAX_FILES){uploadSection.style.display='none'}
+  else{
+    uploadSection.style.display='block';
+    document.getElementById('uploadTitle').textContent='Add more PDFs';
+    document.getElementById('uploadSub').textContent=uploadedFiles.length+'/'+MAX_FILES+' files added';
+    uploadZone.style.padding='16px 20px';
+  }
+  let html='';
+  uploadedFiles.forEach((f,i)=>{
+    html+='<div class="file-card"><div class="file-icon">PDF</div><div class="file-card-meta"><div class="name" title="'+f.name+'">'+f.name+'</div><div class="details">'+f.pageCount+' sticker'+(f.pageCount!==1?'s':'')+'</div></div><span class="file-card-order">#'+(i+1)+'</span><button class="btn btn-danger" onclick="removeFile('+i+')" title="Remove">✕</button></div>';
+  });
+  fileListEl.innerHTML=html;
+}
+
+function removeFile(index){
+  uploadedFiles.splice(index,1);
+  flattenStickers();renderFileList();
+  if(uploadedFiles.length===0){
+    downloadBtn.disabled=true;resetAllBtn.disabled=true;
+    previewArea.innerHTML='';previewArea.appendChild(emptyState);emptyState.style.display='';
+    statsEl.innerHTML='';
+  }else{rebuildPages()}
+  updateStats();
+}
+
+function buildNudgeControls(){
+  document.getElementById('tab-columns').innerHTML='<p class="hint">Nudge entire column left/right (mm)</p><div class="align-grid">'+
+    colOffsets.map((v,i)=>'<div class="align-row"><label>Col '+(i+1)+'</label><input type="range" min="-10" max="10" step="0.25" value="'+v+'" oninput="setColOff('+i+',this.value)"><span class="val" id="coV'+i+'">'+v.toFixed(1)+'mm</span></div>').join('')+'</div>';
+  document.getElementById('tab-rows').innerHTML='<p class="hint">Nudge entire row up/down (mm)</p><div class="align-grid">'+
+    rowOffsets.map((v,i)=>'<div class="align-row"><label>Row '+(i+1)+'</label><input type="range" min="-10" max="10" step="0.25" value="'+v+'" oninput="setRowOff('+i+',this.value)"><span class="val" id="roV'+i+'">'+v.toFixed(1)+'mm</span></div>').join('')+'</div>';
+}
+
+function setColOff(i,v){colOffsets[i]=parseFloat(v);document.getElementById('coV'+i).textContent=parseFloat(v).toFixed(1)+'mm';applyOffsets()}
+function setRowOff(i,v){rowOffsets[i]=parseFloat(v);document.getElementById('roV'+i).textContent=parseFloat(v).toFixed(1)+'mm';applyOffsets()}
+
+function applyOffsets(){
+  document.querySelectorAll('.sticker-cell').forEach(cell=>{
+    const c=+cell.dataset.col,r=+cell.dataset.row;
+    const img=cell.querySelector('img');
+    if(img)img.style.transform='translate('+colOffsets[c]+'mm, '+rowOffsets[r]+'mm)';
+  });
+}
+
+function rebuildPages(){
+  if(!stickerImages.length)return;
+  const{mL,mT,cGaps,rGaps,cellW,cellH}=getLayout();
+  computedInfo.innerHTML='Sticker: <strong>'+cellW.toFixed(1)+'mm</strong> × <strong>'+cellH.toFixed(1)+'mm</strong>';
+  previewArea.innerHTML='';emptyState.style.display='none';
+  const totalPages=Math.ceil(stickerImages.length/PER_PAGE);
+  for(let p=0;p<totalPages;p++){
+    const wrapper=document.createElement('div');wrapper.className='a4-page-wrapper';
+    const lbl=document.createElement('div');lbl.className='page-label';lbl.textContent='Page '+(p+1)+' of '+totalPages;
+    wrapper.appendChild(lbl);
+    const page=document.createElement('div');page.className='a4-page';
+    for(let r=0;r<ROWS;r++){
+      let y=mT+r*cellH;for(let g=0;g<r;g++)y+=rGaps[g];
+      for(let c=0;c<COLS;c++){
+        let x=mL+c*cellW;for(let g=0;g<c;g++)x+=cGaps[g];
+        const idx=p*PER_PAGE+r*COLS+c;
+        const cell=document.createElement('div');
+        cell.className='sticker-cell'+(showGuides?' show-guides':'');
+        cell.dataset.row=r;cell.dataset.col=c;
+        cell.style.cssText='left:'+x+'mm;top:'+y+'mm;width:'+cellW+'mm;height:'+cellH+'mm;';
+        if(idx<stickerImages.length){
+          const img=document.createElement('img');img.src=stickerImages[idx];
+          img.style.transform='translate('+colOffsets[c]+'mm, '+rowOffsets[r]+'mm)';
+          cell.appendChild(img);
+        }
+        page.appendChild(cell);
+      }
+    }
+    wrapper.appendChild(page);previewArea.appendChild(wrapper);
+  }
+  updateStats();
+}
+
+function updateStats(){
+  if(!stickerImages.length){statsEl.innerHTML='';return}
+  const pages=Math.ceil(stickerImages.length/PER_PAGE);
+  statsEl.innerHTML='<span><strong>'+uploadedFiles.length+'</strong> file'+(uploadedFiles.length!==1?'s':'')+'</span><span><strong>'+stickerImages.length+'</strong> stickers</span><span><strong>'+pages+'</strong> A4 pages</span>';
+}
+
+function resetAll(){
+  colOffsets.fill(0);rowOffsets.fill(0);
+  document.querySelectorAll('.gap-input').forEach(el=>el.value='0');
+  buildNudgeControls();rebuildPages();
+}
+
+function switchTab(tab,btn){
+  btn.closest('.panel').querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.closest('.panel').querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');document.getElementById('tab-'+tab).classList.add('active');
+}
+
+async function downloadPDF(){
+  if(!stickerImages.length)return;
+  loading.style.display='flex';loadingText.textContent='Generating PDF…';loadingProgress.textContent='';
+  await new Promise(r=>setTimeout(r,50));
+  try{
+    const{jsPDF}=window.jspdf;
+    const{mL,mT,cGaps,rGaps,cellW,cellH}=getLayout();
+    const totalPages=Math.ceil(stickerImages.length/PER_PAGE);
+    const A4_W_PX=2480,A4_H_PX=3508,MM2PX=A4_W_PX/210;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    for(let p=0;p<totalPages;p++){
+      if(p>0)doc.addPage();
+      loadingText.textContent='Compositing pages…';loadingProgress.textContent=(p+1)+' / '+totalPages;
+      await new Promise(r=>setTimeout(r,10));
+      const pc=document.createElement('canvas');pc.width=A4_W_PX;pc.height=A4_H_PX;
+      const ctx=pc.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,A4_W_PX,A4_H_PX);
+      for(let r=0;r<ROWS;r++){
+        let yMM=mT+r*cellH;for(let g=0;g<r;g++)yMM+=rGaps[g];
+        for(let c=0;c<COLS;c++){
+          let xMM=mL+c*cellW;for(let g=0;g<c;g++)xMM+=cGaps[g];
+          const idx=p*PER_PAGE+r*COLS+c;
+          if(idx>=stickerCanvases.length)continue;
+          const fX=(xMM+colOffsets[c])*MM2PX,fY=(yMM+rowOffsets[r])*MM2PX;
+          const cW=cellW*MM2PX,cH=cellH*MM2PX;
+          const src=stickerCanvases[idx];
+          const iA=src.width/src.height,cA=cW/cH;
+          let dw,dh,dx,dy;
+          if(iA>cA){dw=cW;dh=cW/iA;dx=fX;dy=fY+(cH-dh)/2}
+          else{dh=cH;dw=cH*iA;dx=fX+(cW-dw)/2;dy=fY}
+          ctx.drawImage(src,dx,dy,dw,dh);
+        }
+      }
+      let q=0.80;let jd=pc.toDataURL('image/jpeg',q);
+      while(jd.length>1200000&&q>0.3){q-=0.1;jd=pc.toDataURL('image/jpeg',q)}
+      doc.addImage(jd,'JPEG',0,0,210,297);
+    }
+    loadingText.textContent='Saving…';loadingProgress.textContent='';
+    await new Promise(r=>setTimeout(r,10));
+    doc.save('honest-meals-stickers.pdf');
+  }catch(err){alert('PDF error: '+err.message);console.error(err)}
+  finally{loading.style.display='none'}
+}
+
+// Apply Mobile Printing preset on load
+savedSettings=captureSettings();
+applySettings(PRESET_MOBILE_PRINTING);
+</script>
+</body>
+</html>
