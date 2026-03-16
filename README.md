@@ -1,0 +1,1 @@
+# sticker-generator-ver-2
